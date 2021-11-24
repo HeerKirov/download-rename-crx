@@ -1,2 +1,2 @@
-# download-rename-crx
-Rename any download file in broswer.
+# Download Rename Crx
+Rename file by configured rules when download.

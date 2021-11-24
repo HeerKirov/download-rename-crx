@@ -1,0 +1,13 @@
+{
+	"manifest_version": 3,
+	"name": "Download Rename",
+	"version": "0.1.0",
+	"description": "下载文件时提供按规则的重命名",
+	"background": {
+		"service_worker": "js/background.js",
+		"type": "module"
+	},
+	"permissions": [
+		"downloads"
+	]
+}
