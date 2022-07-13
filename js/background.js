@@ -10,6 +10,7 @@ const rules = conf.rules.map(rule => ({
 chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
     const { filename, finalUrl, url, mime, referrer } = item
     const [ name, extension ] = splitNameAndExtension(filename)
+    console.log(filename, finalUrl, url, referrer, mime)
     for(const rule of rules) {
         if(rule.includeExtension && (!extension || !rule.includeExtension.includes(extension))) break
         let finalName = rule.rename
@@ -18,6 +19,7 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
             const res = rule.referrer.exec(referrer)
             if(!res) {
                 console.log("rule not matched bacause referrer is not matched.")
+                console.log(`url is ${referrer}`)
                 break
             }
             for(const key of Object.keys(res.groups)) {
@@ -44,3 +46,4 @@ function splitNameAndExtension(filename) {
     const i = filename.lastIndexOf(".")
     return i >= 0 ? [filename.substr(0, i), filename.substr(i + 1)] : [filename, null]
 }
+
