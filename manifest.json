@@ -9,12 +9,35 @@
 	},
 	"content_scripts": [
 		{
+			"matches": ["https://chan.sankakucomplex.com/*"],
+			"js": ["js/chan-script.js"],
+			"run_at": "document_start"
+		},
+		{
 			"matches": ["https://chan.sankakucomplex.com/post/show/*"],
 			"js": ["js/chan-content-script.js"],
+			"run_at": "document_start"
+		},
+		{
+			"matches": ["https://www.fanbox.cc/*/posts/*"],
+			"js": ["js/fanbox-content-script.js"],
+			"run_at": "document_start"
+		},
+		{
+			"matches": ["https://e-hentai.org/g/*"],
+			"js": ["js/ehentai-g-script.js"],
+			"run_at": "document_start"
+		},
+		{
+			"matches": ["https://e-hentai.org/s/*"],
+			"js": ["js/ehentai-s-script.js"],
 			"run_at": "document_start"
 		}
 	],
 	"permissions": [
-		"downloads"
+		"downloads",
+		"contextMenus",
+		"notifications",
+		"tabs"
 	]
 }
