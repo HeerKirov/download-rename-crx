@@ -9,7 +9,21 @@ const rules = conf.rules.map(rule => ({
     secondaryTransfer: rule.secondaryTransfer
 }))
 
-const metadataCache = {}
+chrome.runtime.onMessage.addListener(function(msg, sender, response) {
+    if(typeof msg === "object") {
+        if(msg.type === "ehentai-s-report") {
+            const { pname, pid, part } = msg
+            chrome.storage.session.set({
+                [`ehentai-s-hash:${pid}-${part}`]: pname
+            })
+        }else if(msg.type === "ehentai-g-report") {
+            const { gid, token } = msg
+            chrome.storage.session.set({
+                [`ehentai-g-token:${gid}`]: token
+            })
+        }
+    }
+})
 
 chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
     const { filename, finalUrl, url, mime, referrer } = item
@@ -63,7 +77,9 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
             })
 
             return true
-        }else if(rule.secondaryTransfer === 'e-hentai') {
+        }else if(rule.secondaryTransfer === 'e-hentai-original') {
+            //点击“下载原始文件”时的下载项。特征是url可解析，能从中获得galleryId, pageNum。
+            //为何补全信息，还需要向页面发送事件，获取imageHash。
             const args = {}
             for(const key of Object.keys(res.groups)) {
                 args[key] = res.groups[key]
@@ -72,57 +88,67 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
                 const value = args[key]
                 finalName = finalName.replace(`$<${key}>`, value)
             }
-            const pid = args['PID']
-            // if(metadataCache[pid]) {
-            //     for(const key of Object.keys(res.groups)) {
-            //         const value = res.groups[key]
-            //         finalName = finalName.replace(`$<${key}>`, value)
-            //     }
-            //     console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
-            //     suggest({filename: finalName + (extension ? "." + extension : "")})
-            // }else
-            {
-                const url = `https://e-hentai.org/g/${pid}/*`
-                console.log("look for ", url)
-                chrome.tabs.query({currentWindow: true, url}, tabs => {
-                    // chrome.tabs.sendMessage(tabs[0].id, {type: "download-find-transfer-args", args}, response => {
-                    //     console.log(`receive download-find-transfer-args`, response)
-                    //     if(response) {
-                    //         for(const key of Object.keys(response)) {
-                    //             const value = response[key]
-                    //             if(value) {
-                    //                 finalName += `\\${key}:${value}`
-                    //             }
-                    //         }
-                    //         // metadataCache[pid] = true
-                    //     }
-                        
-                    //     console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
-                    //     suggest({filename: finalName + (extension ? "." + extension : "")})
-                    // })
-                })
-    
-                return true
-            }
-        }else if(rule.secondaryTransfer === "e-hentai-active") {
+
+            const key = `ehentai-s-hash:${args['PID']}-${args['PART']}`
+            chrome.storage.session.get([key]).then(result => {
+                if(result[key]) {
+                    console.log(`get pname of ${args['PID']}-${args['PART']} from session storage: ${result[key]}`)
+                    finalName = finalName.replace(`$<PNAME>`, result[key])
+                    console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
+                    suggest({filename: finalName + (extension ? "." + extension : "")})
+                }else{
+                    chrome.tabs.query({currentWindow: true, url: `https://e-hentai.org/s/*/${args['PID']}-${args['PART']}*`}, tabs => {
+                        const re = new RegExp("https://e-hentai.org/s/(\\S+)/(\\d+)-(\\d+)")
+                        for(const tab of tabs) {
+                            const res = re.exec(tab.url)
+                            if(res) {
+                                const pname = res[1]
+                                const pid = res[2]
+                                const part = res[3]
+                                if(pid === args['PID'] && part === args['PART']) {
+                                    finalName = finalName.replace(`$<PNAME>`, pname)
+        
+                                    console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
+                                    suggest({filename: finalName + (extension ? "." + extension : "")})
+        
+                                    return
+                                }
+                            }
+                        }
+                        //tips: ehentai的原始文件下载有失败重下的可能，此时会重新获取建议，但很可能tab被关了导致建议失败。针对这种情况可以优化一下。
+        
+                        //else
+                        console.error(`Cannot find e-hentai.org/s/*/${args['PID']}-${args['PART']} tab.`)
+                        suggest({filename})
+                    })
+                }
+            })
+
+            
+            return true
+        }else if(rule.secondaryTransfer === "e-hentai-save-as") {
+            //右键另存为图片，这种模式无法从下载项中获取任何信息。解决思路是利用“下载时一定位于当前页面”的巧合，将当前激活页面当作原始页。
+            //从URL就能获取所需的imageHash, galleryId, pageNum。
             chrome.tabs.query({currentWindow: true, active: true, url: "https://e-hentai.org/s/*/*"}, tabs => {
                 if(tabs.length > 0) {
-                    chrome.tabs.sendMessage(tabs[0].id, {type: "download-find-active-args", args: {filename}}, response => {
-                        if(response) {
-                            for(const key of Object.keys(response)) {
-                                const value = response[key]
-                                finalName = finalName.replace(`$<${key}>`, value)
-                            }
-                            
-                            console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
-                            suggest({filename: finalName + (extension ? "." + extension : "")})
-                        }else{
-                            console.error("response is empty.")
-                            suggest({filename})        
-                        }
-                    })
+                    const re = new RegExp("https://e-hentai.org/s/(\\S+)/(\\d+)-(\\d+)")
+                    const res = re.exec(tabs[0].url)
+                    if(res) {
+                        const pname = res[1]
+                        const pid = res[2]
+                        const part = res[3]
+                        finalName = finalName.replace(`$<PNAME>`, pname)
+                        finalName = finalName.replace(`$<PID>`, pid)
+                        finalName = finalName.replace(`$<PART>`, part)
+
+                        console.log('suggest filename:', finalName + (extension ? "." + extension : ""))
+                        suggest({filename: finalName + (extension ? "." + extension : "")})
+                    }else{
+                        console.error(`Cannot analyse tab url ${tabs[0].url}.`)
+                        suggest({filename})
+                    }
                 }else{
-                    console.error("Cannot find active ehentai gallery tab.")
+                    console.error("Cannot find active e-hentai.org/s/ tab.")
                     suggest({filename})
                 }
             })

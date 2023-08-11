@@ -1,26 +1,15 @@
 
 document.addEventListener('DOMContentLoaded', function() {
-    processDownloadLink()
-})
+    const re = new RegExp("https://e-hentai.org/s/(\\S+)/(\\d+)-(\\d+)")
+    const res = re.exec(document.location.href)
+    const pname = res[1]
+    const pid = res[2]
+    const part = res[3]
 
-function processDownloadLink() {
-    
-}
-
-chrome.runtime.onMessage.addListener(function (msg, sender, response) {
-    if(msg && msg.type === "download-find-active-args") {
-        const re = new RegExp("https://e-hentai.org/s/\\S+/(\\d+)-(\\d+)")
-        const res = re.exec(document.location.href)
-        if(!res) {
-            response(undefined)
-            return
-        }
-        const pid = res[1]
-        const part = res[2]
-        response({
-            PID: pid,
-            PART: part,
-            FILENAME: msg.args["filename"]
-        })
-    }
+    chrome.runtime.sendMessage({
+        type: "ehentai-s-report",
+        pname,
+        pid,
+        part
+    })
 })
