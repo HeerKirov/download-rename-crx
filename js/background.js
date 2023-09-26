@@ -9,6 +9,8 @@ const rules = conf.rules.map(rule => ({
     secondaryTransfer: rule.secondaryTransfer
 }))
 
+const downloadIdToFilename = {}
+
 chrome.runtime.onMessage.addListener(function(msg, sender, response) {
     if(typeof msg === "object") {
         if(msg.type === "ehentai-s-report") {
@@ -21,18 +23,28 @@ chrome.runtime.onMessage.addListener(function(msg, sender, response) {
             chrome.storage.session.set({
                 [`ehentai-g-token:${gid}`]: token
             })
+        }else if(msg.type === "download") {
+            const { url, filename } = msg
+            console.log("download file.", filename, url)
+            chrome.downloads.download({url, filename}, downloadId => {
+                downloadIdToFilename[downloadId] = filename
+            })
         }
     }
 })
 
 chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
-    const { filename, finalUrl, url, mime, referrer } = item
+    const { filename, finalUrl, url, mime, referrer, id } = item
     const [ _, extension ] = splitNameAndExtension(filename)
     console.log("filename:", filename)
     console.log("finalUrl:", finalUrl)
     console.log("url:", url)
     console.log("referrer:", referrer)
     console.log("mime:", mime)
+    if(id in downloadIdToFilename) {
+        console.log("suggest this download because its filename was cached.")
+        suggest({filename: downloadIdToFilename[id] + (extension ? "." + extension : "")})
+    }
 
     let rule = null
     let res = null

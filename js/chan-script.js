@@ -15,7 +15,20 @@ document.addEventListener('DOMContentLoaded', function() {
     processPagination()
     processThumb()
     processTagList()
+    processFuckingAds()
 })
+
+function processFuckingAds() {
+    const contentDiv = document.querySelector("#content")
+    if(contentDiv) {
+        for(let i = contentDiv.children.length - 1; i >= contentDiv.children.length - 3; --i) {
+            const child = contentDiv.children[i]
+            if(child.nodeName === "DIV" && [...child.attributes].map(k => k.name.length).some(k => k === 7)) {
+                child.style.visibility = "hidden"
+            }
+        }
+    }
+}
 
 function processTagList() {
     const tags = document.querySelectorAll('#tag-sidebar li.tag-type-artist,li.tag-type-studio,li.tag-type-copyright,li.tag-type-character')
@@ -26,7 +39,10 @@ function processTagList() {
         for(let i = 0; i < childNodes.length; i++) {
             const childNode = childNodes[i]
             if(childNode.nodeName === "#text" && childNode.textContent.startsWith("Posts:")) {
-                postCount = childNode.textContent.substring("Posts:".length + 1).trim()
+                const spanNode = childNodes[i + 1]
+                if(spanNode.nodeName === "SPAN") {
+                    postCount = spanNode.innerText
+                }
             }else if(childNode.nodeName === "#text" && childNode.textContent.startsWith("Books:")) {
                 const aNode = childNodes[i + 1]
                 if(aNode.nodeName === "A") {
