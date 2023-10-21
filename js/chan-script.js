@@ -1,7 +1,6 @@
 
 
 document.addEventListener('keydown', function(e) {
-    console.log(e)
     if(e.code === 'Tab') {
         console.log('detach Tab')
         e.stopImmediatePropagation()
@@ -28,6 +27,17 @@ function processFuckingAds() {
             }
         }
     }
+    const ads = document.querySelectorAll("#sp1.scad")
+    for(const item of ads) {
+        item.remove()
+    }
+    const mailNotice = document.querySelectorAll("#has-mail-notice.has-mail")
+    for(const item of mailNotice) {
+        item.remove()
+    }
+    document.querySelector("#headerlogo")?.remove()
+    document.querySelector("div > ul + ins")?.remove()
+    document.querySelector("#news-ticker")?.remove()
 }
 
 function processTagList() {

@@ -38,22 +38,34 @@ chrome.runtime.onMessage.addListener(function (msg, sender, response) {
 
 function processComments() {
     const re = /.*[\u4e00-\u9fa5]+.*$/
-    const banList = ["OP", "批", "喷", "丑", "爹", "狗", "叫", "滚", "孝"]
+    const banList = ["OP", "原批", "喷", "丑", "爹", "狗叫", "滚", "孝", "米黑", "米哈游", "萎哥", "二苇", "二萎", "幕勾"]
+    const banUsers = ["pex019", "G5SOr3K", "Ardyn54", "wlk", "TrinitySS", "哦个好家伙", "Viola64", "zjm13756501613", "二苇渡江"]
+    const warnTags = ["genshin impact", "honkai star rail"]
     
     const divs = document.querySelectorAll("div#cdiv > div.c1")
+    const tags = [...document.querySelectorAll("#taglist a")]
+    const parodyCount = tags.filter(a => a.id.startsWith("ta_parody")).length
+    const warning = tags.some(a => warnTags.includes(a.textContent)) && parodyCount < 2
     
     const cn = []
     const bad = []
     const banned = []
+    const bannedUser = []
     for(let i = 0; i < divs.length; ++i) {
         const div = divs[i]
         if(div.querySelector("a[name=ulcomment]")) {
             continue
         }
+        const c3 = div.querySelector("div.c3 > a")
+        if(c3 && c3.textContent) {
+            if(banUsers.includes(c3.textContent)) {
+                bannedUser.push(i)
+            }
+        }
         const c5 = div.querySelector("div.c5 > span")
         if(c5) {
             const score = parseInt(c5.textContent)
-            if(score < -10) {
+            if(score < -20) {
                 bad.push(i)
             }
         }
@@ -68,12 +80,28 @@ function processComments() {
             }
         }
     }
-    if((cn.length >= 2 && bad.length >= 1) || banned.length >= 1) {
-        const list = [...new Set([...cn, ...bad, ...banned]).values()]
+    if(warning && cn.length >= 2 && (bad.length >= 1 || bannedUser.length >= 1 || banned.length >= 1)) {
+        const list = [...new Set([...cn, ...bad, ...banned, ...bannedUser]).values()]
+        for(const idx of list) {
+            const div = divs[idx]
+            if(bannedUser.includes(idx) || banned.includes(idx) || bad.includes(idx) || cn.includes(idx)) {
+                div.querySelector("div.c6")?.remove()
+            }   
+        }
+    }else if((cn.length >= 2 && bad.length >= 1) || banned.length >= 1 || bannedUser.length >= 1) {
+        const list = [...new Set([...cn, ...bad, ...banned, ...bannedUser]).values()]
         for(const idx of list) {
             const div = divs[idx]
             const c6 = div.querySelector("div.c6")
-            c6.style = "color: black; background-color: black"
+            if(bannedUser.includes(idx)) {
+                const c3 = div.querySelector("div.c3 > a")
+                c3.style = "color: black; background-color: black"
+            }
+            if(bannedUser.includes(idx) || banned.includes(idx) || bad.includes(idx)) {
+                c6.style = "color: black; background-color: black"
+            }else{
+                c6.style = "color: grey; background-color: grey"
+            }
         }
     }
 }
